@@ -3,18 +3,27 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Jeu de Mario et Zombies</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-    <link rel="stylesheet" href="style.css" />
+    <title>Titi Mario Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
   </head>
-  <body>
-    <div class="mode-container">
-      <a id="player" href="player.htm">
-        <button id="player-button">Lancer le mode Joueur !</button>
-      </a>
-      <a id="ai" href="ai.html">
-        <button id="ai-button">Lancer le mode AI !</button>
-      </a>
+  <body class="bg-gray-900 text-white flex items-center justify-center min-h-screen">
+    <div class="text-center">
+      <h1 class="text-4xl font-bold mb-4">Titi Mario Game</h1>
+      <p class="text-lg mb-8">
+        Bienvenue dans le monde de Titi Mario ! Votre objectif est simple : éviter les zombies et obtenir le meilleur score possible. Choisissez votre mode de jeu ci-dessous.
+      </p>
+      <div class="grid grid-cols-2 gap-10">
+        <a id="player" href="game.html">
+          <button id="player-button" class="px-8 py-4 bg-blue-500 text-white text-lg font-semibold rounded-lg shadow-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-opacity-75 transition duration-300">
+            Lancer le mode Joueur !
+          </button>
+        </a>
+        <a id="ai" href="ai.html">
+          <button id="ai-button" class="px-8 py-4 bg-green-500 text-white text-lg font-semibold rounded-lg shadow-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-300 focus:ring-opacity-75 transition duration-300">
+            Lancer le mode AI !
+          </button>
+        </a>
+      </div>
     </div>
   </body>
 </html>
