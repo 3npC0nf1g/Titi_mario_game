@@ -14,6 +14,7 @@ The game state, including player movements, zombie spawns, and collisions, is sa
 - **Reinforcement Learning Data Logging**: The game logs key events (player movements, zombie spawns, collisions) into a JSON file, which is automatically downloaded when the game ends.
 
 ## Data Logging
+
 **The game logs the following data:**
 
 - **Score**: The current score at each event.
@@ -25,6 +26,7 @@ The game state, including player movements, zombie spawns, and collisions, is sa
 The data is saved in a JSON file with a filename in the format training_data_YYYY-MM-DD_HHhMMSSs.json, where YYYY-MM-DD is the date and HHhMM is the time.
 
 **Example**:
+
 ```json
 [
   {
@@ -35,8 +37,8 @@ The data is saved in a JSON file with a filename in the format training_data_YYY
       "top": 200
     },
     "obstacles": [
-      {"left": 100, "top": 300},
-      {"left": 200, "top": 100}
+      { "left": 100, "top": 300 },
+      { "left": 200, "top": 100 }
     ],
     "speed": 5.3,
     "actionType": "move",
@@ -50,8 +52,8 @@ The data is saved in a JSON file with a filename in the format training_data_YYY
       "top": 200
     },
     "obstacles": [
-      {"left": 100, "top": 350},
-      {"left": 220, "top": 150}
+      { "left": 100, "top": 350 },
+      { "left": 220, "top": 150 }
     ],
     "speed": 5.6,
     "actionType": "collision",
@@ -68,3 +70,9 @@ The data is saved in a JSON file with a filename in the format training_data_YYY
 git clone https://github.com/3npC0nf1g/Titi_mario_game.git
 cd Titi_mario_game
 ```
+
+## Implementation
+
+There are our implementation steps
+
+[Download the PDF Guide](./mario_zombies.pdf)
