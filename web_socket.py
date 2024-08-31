@@ -5,7 +5,7 @@ import tensorflow as tf
 import numpy as np
 
 
-model = tf.keras.models.load_model('path_to_model') # Charger le modèle
+model = tf.keras.models.load_model('') # Charger le modèle
 
 async def handle_connection(websocket, path):
     async for message in websocket:

@@ -5,20 +5,23 @@ socket.onopen = function (event) {
 };
 
 socket.onmessage = function (event) {
-  const action = JSON.parse(event.data);
+  const action = event.data;
+  console.log("websocket received : " + action);
+
   handleMarioAIMovement(action); // exécuter l'action venant de l'IA
 };
 
-function sendStateToserver(state) {
-  socket.send(JSON.stringify(state));
+function sendStateToServer(state) {
+  //socket.send(JSON.stringify(state));
 }
 
 function getStateAndSendtoAI() {
   const state = getCurrentState();
-  sendStateToserver(state);
+  sendStateToServer(state);
 }
 
 function getCurrentState() {
+  //Récupération de l'état actuel du jeu pour l'envoyer au model
   const marioAndZombiesPosition = {
     mario: {
       left: parseInt(window.getComputedStyle(mario).getPropertyValue("left")),
@@ -120,19 +123,19 @@ function handleMarioAIMovement(action) {
   switch (
     action // exécution des actions venant du jeu
   ) {
-    case "ArrowUp":
+    case "Up":
       moveMarioVertically(marioPosition, -marioSpeed, roadDimensions.height);
       getStateAndSendtoAI();
       break;
-    case "ArrowDown":
+    case "Down":
       moveMarioVertically(marioPosition, marioSpeed, roadDimensions.height);
       getStateAndSendtoAI();
       break;
-    case "ArrowLeft":
+    case "Left":
       moveMarioHorizontally(marioPosition, -marioSpeed, roadDimension.width);
       getStateAndSendtoAI();
       break;
-    case "ArrowRight":
+    case "Right":
       moveMarioHorizontally(marioPosition, marioSpeed, roadDimensions.width);
       getStateAndSendtoAI();
   }
@@ -200,6 +203,7 @@ function moveZombies() {
     if (checkCollision(mario, zombie)) {
       handleCollision({ mario, zombie });
     }
+    getStateAndSendtoAI();
   });
 }
 
