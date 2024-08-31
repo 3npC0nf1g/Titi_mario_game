@@ -280,6 +280,8 @@ function checkCollision(mario, zombie) {
 function handleCollision({ zombie }) {
   isCollision = true;
   score = 0;
+  currentZombieSpeed = initialZombieSpeed;
+  zombieCounts = { maxZombies: 1, minZombies: 1 };
   if (ENABLED_END_ON_COLLISION) {
     clearInterval(intervalMoveZombieId);
     clearInterval(intervalCreateZombieId);
