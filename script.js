@@ -52,7 +52,7 @@ function getCurrentState() {
         left: parseInt(window.getComputedStyle(mario).getPropertyValue("left")),
         top: parseInt(window.getComputedStyle(mario).getPropertyValue("top")),
       },
-      zombies: obstacles.map((zombie) => ({
+      zombies: obstacles.map(zombie => ({
         left: parseInt(
           window.getComputedStyle(zombie).getPropertyValue("left")
         ),
@@ -77,6 +77,8 @@ function calculateMaxZombies(screenWidth, zombieWidth) {
 const mario = document.getElementById("mario");
 const road = document.getElementById("road");
 const scoreDisplay = document.getElementById("score");
+const bestScoreDisplay = document.getElementById("best-score");
+const countGameDisplay = document.getElementById("count-game");
 const replayButton = document.getElementById("replay");
 
 const initialZombieSpeed = 5;
@@ -98,6 +100,8 @@ const ENABLED_END_ON_COLLISION = false;
 
 let isCollision = false;
 let score = 0;
+let bestScore = 0;
+let countGame = 1;
 let obstacles = [];
 let currentZombieSpeed = initialZombieSpeed;
 let zombieCounts = { maxZombies: 1, minZombies: 1 };
@@ -105,16 +109,22 @@ let intervalCreateZombieId, intervalMoveZombieId;
 
 function initGame() {
   isCollision = false;
+  if (score > bestScore) {
+    bestScore = score;
+    updateBestScore();
+  }
   score = 0;
-  obstacles.forEach((zombiElt)=>{
-    zombiElt.remove()
-  })
+  countGame++;
+  updateCountGame();
+  updateScore();
+  obstacles.forEach(zombiElt => {
+    zombiElt.remove();
+  });
   obstacles = [];
   currentZombieSpeed = initialZombieSpeed;
   zombieCounts = { maxZombies: 1, minZombies: 1 };
   mario.style.top = "95%";
   mario.style.left = "50%";
-
 }
 
 replayButton.addEventListener("click", () => window.location.reload());
@@ -268,7 +278,13 @@ function removeZombie(zombie, index) {
 }
 
 function updateScore() {
-  scoreDisplay.textContent = `Score: ${score}`;
+  scoreDisplay.textContent = `Score : ${score}`;
+}
+function updateBestScore() {
+  bestScoreDisplay.textContent = `Meilleur score de Mario : ${bestScore}`;
+}
+function updateCountGame() {
+  countGameDisplay.textContent = `Nombre de partie : ${countGame}`;
 }
 
 function increaseZombieSpeed() {
@@ -292,7 +308,7 @@ function checkCollision(mario, zombie) {
 function handleCollision({ zombie }) {
   isCollision = true;
   getStateAndSendtoAI();
-  initGame()
+  initGame();
   if (ENABLED_END_ON_COLLISION) {
     clearInterval(intervalMoveZombieId);
     clearInterval(intervalCreateZombieId);
@@ -301,7 +317,6 @@ function handleCollision({ zombie }) {
     triggerBoomAnimation(zombieRect.left, zombieRect.top);
     replayButton.style.display = "block";
   }
-  
 }
 
 function triggerBoomAnimation(x, y) {
@@ -317,6 +332,7 @@ function triggerBoomAnimation(x, y) {
 }
 
 function startGame() {
+  updateCountGame();
   createMultipleZombies();
   intervalCreateZombieId = setInterval(createMultipleZombies, 2000);
   intervalMoveZombieId = setInterval(moveZombies, 50);
