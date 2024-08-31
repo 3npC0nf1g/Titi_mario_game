@@ -1,37 +1,73 @@
 const socket = new WebSocket("ws://localhost:8765");
 
-socket.onopen = function (event) {
-  console.log("WebSocket is connected !!!!!!");
-};
+const messageQueue = [];
 
-socket.addEventListener("message", function (event) {
-  const action = event.data;
-  console.log(event.data);
-  handleMarioAIMovement(action); // exécuter l'action venant de l'IA
+function sendMessage(socket, message) {
+  if (socket.readyState === WebSocket.OPEN) {
+    socket.send(message);
+  } else {
+    console.warn("WebSocket is not open. Cannot send message.");
+  }
+}
+
+function queueOrSend(message) {
+  if (socket.readyState === WebSocket.OPEN) {
+    socket.send(message);
+  } else {
+    messageQueue.push(message);
+  }
+}
+
+socket.addEventListener("open", function () {
+  console.log("WebSocket connection established");
+
+  while (messageQueue.length > 0) {
+    const message = messageQueue.shift();
+    socket.send(message);
+  }
 });
 
-function sendStateToServer(state) {
-  //socket.send(JSON.stringify(state));
+socket.addEventListener("message", function (event) {
+  const message = JSON.parse(event.data);
+  if (message.type === "ai_move") {
+    const { data: action } = message;
+    console.log("Receive AI Move", action);
+    handleMarioAIMovement(action);
+  }
+});
+
+socket.addEventListener("error", function (event) {
+  console.error("WebSocket error:", event);
+});
+
+socket.addEventListener("close", function (event) {
+  console.log("WebSocket connection closed:", event);
+});
+
+function getCurrentState() {
+  return {
+    type: "game_state",
+    data: {
+      mario: {
+        left: parseInt(window.getComputedStyle(mario).getPropertyValue("left")),
+        top: parseInt(window.getComputedStyle(mario).getPropertyValue("top")),
+      },
+      zombies: obstacles.map((zombie) => ({
+        left: parseInt(
+          window.getComputedStyle(zombie).getPropertyValue("left")
+        ),
+        top: parseInt(window.getComputedStyle(zombie).getPropertyValue("top")),
+      })),
+      score,
+      collision: isCollision,
+    },
+  };
 }
 
 function getStateAndSendtoAI() {
   const state = getCurrentState();
-  sendStateToServer(state);
-}
-
-function getCurrentState() {
-  //Récupération de l'état actuel du jeu pour l'envoyer au model
-  const marioAndZombiesPosition = {
-    mario: {
-      left: parseInt(window.getComputedStyle(mario).getPropertyValue("left")),
-      top: parseInt(window.getComputedStyle(mario).getPropertyValue("top")),
-    },
-    zombies: obstacles.map(zombie => ({
-      left: parseInt(window.getComputedStyle(zombie).getPropertyValue("left")),
-      top: parseInt(window.getComputedStyle(zombie).getPropertyValue("top")),
-    })),
-  };
-  return marioAndZombiesPosition;
+  console.log("Send State to AI", state);
+  sendMessage(socket, JSON.stringify(state));
 }
 
 function calculateMaxZombies(screenWidth, zombieWidth) {
@@ -53,13 +89,14 @@ const screenWidth = window.innerWidth;
 const maxZombiesNeeded = Math.ceil(
   calculateMaxZombies(screenWidth, zombieWidth) * 0.66
 );
+
 const MIN_ZOMBIES = Math.ceil(maxZombiesNeeded * 0.5);
 const MAX_ZOMBIES = Math.ceil(maxZombiesNeeded);
 const STEP_MAX_ZOMBIE = Math.ceil(maxZombiesNeeded * 0.1);
 const STEP_MIN_ZOMBIE = Math.ceil(maxZombiesNeeded * 0.05);
+const ENABLED_END_ON_COLLISION = false;
 
-let isEndOfGame = false;
-
+let isCollision = false;
 let score = 0;
 let obstacles = [];
 let currentZombieSpeed = initialZombieSpeed;
@@ -93,27 +130,21 @@ function handleMarioMovement(event) {
   switch (event.key) {
     case "ArrowUp":
       moveMarioVertically(marioPosition, -marioSpeed, roadDimensions.height);
-      saveTrainingData("move", "up", { marioPosition, roadDimensions });
       break;
     case "ArrowDown":
       moveMarioVertically(marioPosition, marioSpeed, roadDimensions.height);
-      saveTrainingData("move", "down", { marioPosition, roadDimensions });
       break;
     case "ArrowLeft":
       moveMarioHorizontally(marioPosition, -marioSpeed, roadDimensions.width);
-      saveTrainingData("move", "left", { marioPosition, roadDimensions });
       break;
     case "ArrowRight":
       moveMarioHorizontally(marioPosition, marioSpeed, roadDimensions.width);
-      saveTrainingData("move", "right", { marioPosition, roadDimensions });
       break;
   }
 }
 
 function handleMarioAIMovement(action) {
-  if(isEndOfGame){
-    return;
-  }
+
   const marioPosition = {
     left: parseInt(window.getComputedStyle(mario).getPropertyValue("left")),
     top: parseInt(window.getComputedStyle(mario).getPropertyValue("top")),
@@ -137,11 +168,12 @@ function handleMarioAIMovement(action) {
       break;
     case "Left":
       moveMarioHorizontally(marioPosition, -marioSpeed, roadDimensions.width);
-      console.log("Left",marioPosition, -marioSpeed, roadDimensions.width)
       getStateAndSendtoAI();
       break;
     case "Right":
       moveMarioHorizontally(marioPosition, marioSpeed, roadDimensions.width);
+      getStateAndSendtoAI();
+    case "Stay":
       getStateAndSendtoAI();
   }
 }
@@ -182,7 +214,6 @@ function createMultipleZombies() {
   for (let i = 0; i < numberOfZombies; i++) {
     createZombie();
   }
-  saveTrainingData("spawn", "zombies", { numberOfZombies });
 }
 
 function getRandomZombieCount() {
@@ -194,6 +225,7 @@ function getRandomZombieCount() {
 }
 
 function moveZombies() {
+  isCollision = false;
   obstacles.forEach((zombie, index) => {
     const zombieTop = parseInt(
       window.getComputedStyle(zombie).getPropertyValue("top")
@@ -206,10 +238,11 @@ function moveZombies() {
     }
 
     if (checkCollision(mario, zombie)) {
+      isCollision = true
       handleCollision({ mario, zombie });
     }
-    getStateAndSendtoAI();
   });
+  getStateAndSendtoAI();
 }
 
 function removeZombie(zombie, index) {
@@ -219,6 +252,7 @@ function removeZombie(zombie, index) {
   incrementZombieCount();
   updateScore();
   increaseZombieSpeed();
+  getStateAndSendtoAI();
 }
 
 function updateScore() {
@@ -244,16 +278,17 @@ function checkCollision(mario, zombie) {
 }
 
 function handleCollision({ zombie }) {
-  isEndOfGame = true;
-  //saveTrainingData("collision", "zombie", { score });
-  clearInterval(intervalMoveZombieId);
-  clearInterval(intervalCreateZombieId);
-  document.removeEventListener("keydown", handleMarioMovement);
-  const zombieRect = zombie.getBoundingClientRect();
-  triggerBoomAnimation(zombieRect.left, zombieRect.top);
-  replayButton.style.display = "block";
-  //saveTrainingData("game", "end", { finalScore: score });
-  //saveTrainingDataToFile();
+  isCollision = true;
+  score = 0;
+  if (ENABLED_END_ON_COLLISION) {
+    clearInterval(intervalMoveZombieId);
+    clearInterval(intervalCreateZombieId);
+    document.removeEventListener("keydown", handleMarioMovement);
+    const zombieRect = zombie.getBoundingClientRect();
+    triggerBoomAnimation(zombieRect.left, zombieRect.top);
+    replayButton.style.display = "block";
+  }
+  getStateAndSendtoAI();
 }
 
 function triggerBoomAnimation(x, y) {
@@ -268,48 +303,11 @@ function triggerBoomAnimation(x, y) {
   }, 700);
 }
 
-function saveTrainingData(actionType, actionDetail, additionalData = {}) {
-  const gameState = {
-    timestamp: new Date().toISOString(),
-    score,
-    marioPosition: {
-      left: parseInt(mario.style.left),
-      top: parseInt(mario.style.top),
-    },
-    obstacles: obstacles.map(zombie => ({
-      left: parseInt(zombie.style.left),
-      top: parseInt(zombie.style.top),
-    })),
-    speed: currentZombieSpeed,
-    actionType,
-    actionDetail,
-    ...additionalData,
-  };
-  trainingData.push(gameState);
-}
-
-function saveTrainingDataToFile() {
-  const date = new Date();
-  const formattedDate = `${date.getFullYear()}-${date.getMonth()}-${date.getDay()}`;
-  const formattedTime = `${date.getHours()}h${date.getMinutes()}m${date.getSeconds()}s`;
-  const filename = `training_data_${formattedDate}_${formattedTime}.json`;
-
-  const dataStr = JSON.stringify(trainingData, null, 2);
-  const blob = new Blob([dataStr], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
 function startGame() {
   createMultipleZombies();
   intervalCreateZombieId = setInterval(createMultipleZombies, 2000);
-  intervalMoveZombieId = setInterval(moveZombies, 20);
-  getStateAndSendtoAI(); // Je récupère l'information sur l'état du jeu et je l'envoi au serveur
-  //saveTrainingData("game", "start");
+  intervalMoveZombieId = setInterval(moveZombies, 50);
+  getStateAndSendtoAI();
 }
 
 startGame();
