@@ -101,8 +101,21 @@ let score = 0;
 let obstacles = [];
 let currentZombieSpeed = initialZombieSpeed;
 let zombieCounts = { maxZombies: 1, minZombies: 1 };
-let trainingData = [];
 let intervalCreateZombieId, intervalMoveZombieId;
+
+function initGame() {
+  isCollision = false;
+  score = 0;
+  obstacles.forEach((zombiElt)=>{
+    zombiElt.remove()
+  })
+  obstacles = [];
+  currentZombieSpeed = initialZombieSpeed;
+  zombieCounts = { maxZombies: 1, minZombies: 1 };
+  mario.style.top = "95%";
+  mario.style.left = "50%";
+
+}
 
 replayButton.addEventListener("click", () => window.location.reload());
 document.addEventListener("keydown", handleMarioMovement);
@@ -144,7 +157,6 @@ function handleMarioMovement(event) {
 }
 
 function handleMarioAIMovement(action) {
-
   const marioPosition = {
     left: parseInt(window.getComputedStyle(mario).getPropertyValue("left")),
     top: parseInt(window.getComputedStyle(mario).getPropertyValue("top")),
@@ -238,7 +250,7 @@ function moveZombies() {
     }
 
     if (checkCollision(mario, zombie)) {
-      isCollision = true
+      isCollision = true;
       handleCollision({ mario, zombie });
     }
   });
@@ -279,9 +291,8 @@ function checkCollision(mario, zombie) {
 
 function handleCollision({ zombie }) {
   isCollision = true;
-  score = 0;
-  currentZombieSpeed = initialZombieSpeed;
-  zombieCounts = { maxZombies: 1, minZombies: 1 };
+  getStateAndSendtoAI();
+  initGame()
   if (ENABLED_END_ON_COLLISION) {
     clearInterval(intervalMoveZombieId);
     clearInterval(intervalCreateZombieId);
@@ -290,7 +301,7 @@ function handleCollision({ zombie }) {
     triggerBoomAnimation(zombieRect.left, zombieRect.top);
     replayButton.style.display = "block";
   }
-  getStateAndSendtoAI();
+  
 }
 
 function triggerBoomAnimation(x, y) {
