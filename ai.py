@@ -5,7 +5,7 @@ import numpy as np
 import random
 import os
 
-TIME_OUT_RECONNECT = 2
+TIME_OUT_RECONNECT = 0.2
 URI = "ws://localhost:8765"
 
 class QLearningAgent:
