@@ -7,21 +7,29 @@ import os
 
 TIME_OUT_RECONNECT = 0.2
 URI = "ws://localhost:8765"
+EPSILON_MIN = 0.01
+EPSILON_DECAY = 0.995
+EPOCH = 10000
+
 
 class QLearningAgent:
-    def __init__(self, actions, alpha=0.1, gamma=0.9, epsilon=0.1, q_table_file='q_table.json'):
+    def __init__(self, actions, alpha=0.1, gamma=0.9, epsilon=1.0, epsilon_min=0.01, epsilon_decay=0.995, q_table_file='q_table.json'):
         """
-        Initialise l'agent de Q-learning.
+        Initialise l'agent de Q-learning avec une politique ε-greedy.
         :param actions: Liste des actions possibles.
         :param alpha: Taux d'apprentissage.
         :param gamma: Facteur de réduction.
-        :param epsilon: Taux d'exploration.
+        :param epsilon: Taux d'exploration initial.
+        :param epsilon_min: Taux d'exploration minimum.
+        :param epsilon_decay: Facteur de décroissance de l'exploration.
         :param q_table_file: Nom du fichier pour sauvegarder/charger la table Q.
         """
         self.actions = actions
         self.alpha = alpha
         self.gamma = gamma
         self.epsilon = epsilon
+        self.epsilon_min = epsilon_min
+        self.epsilon_decay = epsilon_decay
         self.q_table_file = q_table_file
         self.q_table = self.load_q_table()  # Charger la table Q si elle existe, sinon initialiser une nouvelle table Q
 
@@ -52,13 +60,15 @@ class QLearningAgent:
         state_key = self.get_state_key(game_state)
         self.initialize_state(state_key)
 
-        # Politique ε-greedy
+        # Politique ε-greedy avec epsilon décroissant
         if random.uniform(0, 1) < self.epsilon:
             # Exploration : choisir une action aléatoire
             action = random.choice(self.actions)
+            print(f"mode exploration (epsilon={self.epsilon:.4f})")
         else:
             # Exploitation : choisir l'action avec la valeur Q maximale
             action = max(self.q_table[state_key], key=self.q_table[state_key].get)
+            print(f"mode exploitation (epsilon={self.epsilon:.4f})")
 
         return action
 
@@ -76,6 +86,12 @@ class QLearningAgent:
         # Mettre à jour la valeur Q pour l'état actuel
         self.q_table[prev_state_key][action] += self.alpha * (reward + self.gamma * future_reward - self.q_table[prev_state_key][action])
 
+    def decay_epsilon(self):
+        """
+        Réduit epsilon après chaque épisode ou action pour encourager l'exploitation.
+        """
+        self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
+
     def save_q_table(self):
         """
         Sauvegarde la table Q dans un fichier JSON.
@@ -92,6 +108,7 @@ class QLearningAgent:
                 return json.load(f)
         else:
             return {}
+
 
 # Exemple d'utilisation
 actions = ["Up", "Down", "Left", "Right", "Stay"]
@@ -111,6 +128,7 @@ def compute_reward(game_state):
 
 ############
 async def handle_messages(websocket):
+    i = 0
     while True:
         try:
             previous_state = None
@@ -122,6 +140,7 @@ async def handle_messages(websocket):
                 # Vérifier le type de message reçu
                 if game_state.get("type") == "game_state":
                     if websocket.open:
+                        i = i + 1 
                         # Prendre une décision avec l'agent de Q-learning
                         decision = agent.choose_action(game_state)
 
@@ -142,6 +161,9 @@ async def handle_messages(websocket):
                         previous_action = decision
 
                         # Sauvegarder la table Q après chaque étape
+                        if i % EPOCH == 0 :
+                            agent.decay_epsilon()
+                            i = 0 
                         agent.save_q_table()
                     else:
                         print("La connexion WebSocket est fermée.")
