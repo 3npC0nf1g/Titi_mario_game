@@ -4,12 +4,11 @@ socket.onopen = function (event) {
   console.log("WebSocket is connected !!!!!!");
 };
 
-socket.onmessage = function (event) {
+socket.addEventListener("message", function (event) {
   const action = event.data;
-  console.log("websocket received : " + action);
-
+  console.log(event.data);
   handleMarioAIMovement(action); // exécuter l'action venant de l'IA
-};
+});
 
 function sendStateToServer(state) {
   //socket.send(JSON.stringify(state));
@@ -58,6 +57,8 @@ const MIN_ZOMBIES = Math.ceil(maxZombiesNeeded * 0.5);
 const MAX_ZOMBIES = Math.ceil(maxZombiesNeeded);
 const STEP_MAX_ZOMBIE = Math.ceil(maxZombiesNeeded * 0.1);
 const STEP_MIN_ZOMBIE = Math.ceil(maxZombiesNeeded * 0.05);
+
+let isEndOfGame = false;
 
 let score = 0;
 let obstacles = [];
@@ -110,6 +111,9 @@ function handleMarioMovement(event) {
 }
 
 function handleMarioAIMovement(action) {
+  if(isEndOfGame){
+    return;
+  }
   const marioPosition = {
     left: parseInt(window.getComputedStyle(mario).getPropertyValue("left")),
     top: parseInt(window.getComputedStyle(mario).getPropertyValue("top")),
@@ -132,7 +136,8 @@ function handleMarioAIMovement(action) {
       getStateAndSendtoAI();
       break;
     case "Left":
-      moveMarioHorizontally(marioPosition, -marioSpeed, roadDimension.width);
+      moveMarioHorizontally(marioPosition, -marioSpeed, roadDimensions.width);
+      console.log("Left",marioPosition, -marioSpeed, roadDimensions.width)
       getStateAndSendtoAI();
       break;
     case "Right":
@@ -239,6 +244,7 @@ function checkCollision(mario, zombie) {
 }
 
 function handleCollision({ zombie }) {
+  isEndOfGame = true;
   //saveTrainingData("collision", "zombie", { score });
   clearInterval(intervalMoveZombieId);
   clearInterval(intervalCreateZombieId);
