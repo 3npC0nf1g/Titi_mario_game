@@ -4,7 +4,6 @@ import json
 import numpy as np
 import random
 import os
-import hashlib
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.optimizers import Adam
@@ -14,8 +13,8 @@ TIME_OUT_RECONNECT = 0.1
 URI = "ws://localhost:8765"
 EPSILON_MIN = 0.01
 EPSILON_DECAY = 0.995
-EPOCH = 20000
-BATCH_SIZE = 64
+EPOCH = 5000
+BATCH_SIZE = 32
 i = 0
 count_epoch = 0
 MODEL_PATH = 'dqn_model.keras'
@@ -190,8 +189,6 @@ async def handle_messages(websocket):
                             agent.decay_epsilon()
                             count_epoch += 1
                             i = 0
-                            print("save model")
-                            agent.save_model()
                             if len(agent.memory) > BATCH_SIZE :
                                 print("launch replay model")
                                 agent.replay(BATCH_SIZE)

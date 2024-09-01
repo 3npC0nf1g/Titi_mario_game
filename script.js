@@ -117,7 +117,7 @@ const zombieWidth = 50;
 const screenWidth = window.innerWidth;
 
 const maxZombiesNeeded = Math.ceil(
-  calculateMaxZombies(screenWidth, zombieWidth) * 0.66
+  calculateMaxZombies(screenWidth, zombieWidth) * 0.47
 );
 
 const MIN_ZOMBIES = Math.ceil(maxZombiesNeeded * 0.5);
