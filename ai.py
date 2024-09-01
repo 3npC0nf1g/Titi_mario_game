@@ -14,14 +14,14 @@ TIME_OUT_RECONNECT = 0.2
 URI = "ws://localhost:8765"
 EPSILON_MIN = 0.01
 EPSILON_DECAY = 0.995
-EPOCH = 5000
+EPOCH = 20000
 BATCH_SIZE = 64
 i = 0
 count_epoch = 0
-MODEL_PATH = 'dqn_model.h5'
+MODEL_PATH = 'dqn_model.keras'
 
 class DQNAgent:
-    def __init__(self, state_size, action_size, alpha=0.001, gamma=0.9, epsilon=0.01, epsilon_min=0.01, epsilon_decay=0.995):
+    def __init__(self, state_size, action_size, alpha=0.001, gamma=0.9, epsilon=1, epsilon_min=0.01, epsilon_decay=0.995):
         """
         Initialise l'agent DQN avec une politique ε-greedy.
         :param state_size: Taille de l'état d'entrée pour le réseau de neurones.
@@ -192,7 +192,7 @@ async def handle_messages(websocket):
                             i = 0
                             print("save model")
                             agent.save_model()
-                            if len(self.memory) > BATCH_SIZE :
+                            if len(agent.memory) > BATCH_SIZE :
                                 print("launch replay model")
                                 agent.replay(BATCH_SIZE)
                                 print("launch save after replay model")
