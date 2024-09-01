@@ -8,18 +8,20 @@ import hashlib
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.losses import MSE
 
 TIME_OUT_RECONNECT = 0.2
 URI = "ws://localhost:8765"
 EPSILON_MIN = 0.01
 EPSILON_DECAY = 0.995
-EPOCH = 100000
+EPOCH = 5000
+BATCH_SIZE = 64
 i = 0
 count_epoch = 0
 MODEL_PATH = 'dqn_model.h5'
 
 class DQNAgent:
-    def __init__(self, state_size, action_size, alpha=0.001, gamma=0.9, epsilon=1.0, epsilon_min=0.01, epsilon_decay=0.995):
+    def __init__(self, state_size, action_size, alpha=0.001, gamma=0.9, epsilon=0.01, epsilon_min=0.01, epsilon_decay=0.995):
         """
         Initialise l'agent DQN avec une politique ε-greedy.
         :param state_size: Taille de l'état d'entrée pour le réseau de neurones.
@@ -48,7 +50,7 @@ class DQNAgent:
         model.add(Dense(24, input_dim=self.state_size, activation='relu'))
         model.add(Dense(24, activation='relu'))
         model.add(Dense(self.action_size, activation='linear'))
-        model.compile(loss='mse', optimizer=Adam(learning_rate=self.alpha))
+        model.compile(loss=MSE, optimizer=Adam(learning_rate=self.alpha))
         return model
 
     def save_model(self):
@@ -64,7 +66,7 @@ class DQNAgent:
         """
         if os.path.exists(MODEL_PATH):
             print(f"Chargement du modèle à partir de {MODEL_PATH}.")
-            return load_model(MODEL_PATH)
+            return load_model(MODEL_PATH, custom_objects={'mse': MSE})
         else:
             print("Aucun modèle sauvegardé trouvé, création d'un nouveau modèle.")
             return self.build_model()
@@ -130,7 +132,7 @@ def compute_reward(game_state):
 ############
 
 async def handle_messages(websocket):
-    global count_epoch, i, EPOCH
+    global count_epoch, i, EPOCH, BATCH_SIZE
     while True:
         try:
             previous_state = None
@@ -190,10 +192,11 @@ async def handle_messages(websocket):
                             i = 0
                             print("save model")
                             agent.save_model()
-                            print("launch replay model")
-                            agent.replay(32)
-                            print("launch save after replay model")
-                            agent.save_model()
+                            if len(self.memory) > BATCH_SIZE :
+                                print("launch replay model")
+                                agent.replay(BATCH_SIZE)
+                                print("launch save after replay model")
+                                agent.save_model()
 
                     else:
                         print("La connexion WebSocket est fermée.")
