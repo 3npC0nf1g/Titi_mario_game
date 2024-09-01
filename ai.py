@@ -40,6 +40,8 @@ class DQNAgent:
         self.epsilon_min = epsilon_min
         self.epsilon_decay = epsilon_decay
         self.model = self.load_model()
+        self.loss_history = []
+        self.reward_history = []
 
     def build_model(self):
         """
@@ -94,13 +96,32 @@ class DQNAgent:
         Entraîne le modèle de réseau de neurones avec un échantillon aléatoire de la mémoire.
         """
         minibatch = random.sample(self.memory, batch_size)
+        loss = 0
         for state, action, reward, next_state, done in minibatch:
             target = reward
             if not done:
                 target = (reward + self.gamma * np.amax(self.model.predict(next_state)[0]))
             target_f = self.model.predict(state)
             target_f[0][action] = target
-            self.model.fit(state, target_f, epochs=1, verbose=0)
+            history = self.model.fit(state, target_f, epochs=1, verbose=0)
+            loss += history.history['loss'][0]
+        loss /= batch_size  # Calcule la perte moyenne pour le batch
+        self.loss_history.append(loss)  # Enregistre la perte moyenne
+
+        # Affiche l'évolution de l'entraînement dans la console
+        self.display_training_progress()
+
+    def display_training_progress(self):
+        """
+        Affiche l'évolution de l'entraînement du modèle dans la console.
+        """
+        if len(self.loss_history) > 0:
+            avg_loss = np.mean(self.loss_history[-10:])  # Moyenne des 10 dernières pertes
+            print(f"Évolution de l'entraînement - Dernières pertes moyennes : {avg_loss:.4f}")
+
+        if len(self.reward_history) > 0:
+            avg_reward = np.mean(self.reward_history[-10:])  # Moyenne des 10 dernières récompenses
+            print(f"Évolution de l'entraînement - Dernières récompenses moyennes : {avg_reward:.2f}")
 
     def decay_epsilon(self):
         """
@@ -138,12 +159,9 @@ async def handle_messages(websocket):
             previous_action = None
             async for message in websocket:
                 game_state = json.loads(message)
-                print(f"Received game state: {game_state}")
-
                 if game_state.get("type") == "game_state":
                     if websocket.open:
                         i += 1
-
                         # Construction du vecteur d'état
                         mario_state = [
                             game_state["data"]["mario"]["left"],
@@ -172,19 +190,17 @@ async def handle_messages(websocket):
 
                         json_message = json.dumps({"type": "ai_move", "data": actions[action]})
                         await websocket.send(json_message)
-                        print(f"Message sent: {json_message}")
 
                         if previous_state is not None and previous_action is not None:
                             reward = compute_reward(game_state)
                             next_state = np.reshape(np.array(mario_state + zombie_positions), [1, state_size])
                             done = game_state["data"]["collision"]
                             agent.remember(previous_state, previous_action, reward, next_state, done)
+                            agent.reward_history.append(reward)
 
                         previous_state = state
                         previous_action = action
 
-                        print(f"count epoch : {count_epoch}")
-                        print(f"evolution of a epoch (i) : {i}")
                         if i % EPOCH == 0:
                             agent.decay_epsilon()
                             count_epoch += 1
@@ -194,6 +210,11 @@ async def handle_messages(websocket):
                                 agent.replay(BATCH_SIZE)
                                 print("launch save after replay model")
                                 agent.save_model()
+
+                        print(f"Message sent: {json_message}")
+                        print(f"count epoch : {count_epoch}")
+                        print(f"evolution of a epoch (i) : {i}")
+                        agent.display_training_progress()
 
                     else:
                         raise Exception("La connexion WebSocket est fermée.")
