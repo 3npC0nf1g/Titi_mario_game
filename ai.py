@@ -9,8 +9,9 @@ TIME_OUT_RECONNECT = 0.2
 URI = "ws://localhost:8765"
 EPSILON_MIN = 0.01
 EPSILON_DECAY = 0.995
-EPOCH = 10000
-
+EPOCH = 60000
+i = 0
+count_epoch = 0
 
 class QLearningAgent:
     def __init__(self, actions, alpha=0.1, gamma=0.9, epsilon=1.0, epsilon_min=0.01, epsilon_decay=0.995, q_table_file='q_table.json'):
@@ -127,8 +128,9 @@ def compute_reward(game_state):
 
 
 ############
+
 async def handle_messages(websocket):
-    i = 0
+    global count_epoch,i 
     while True:
         try:
             previous_state = None
@@ -159,10 +161,13 @@ async def handle_messages(websocket):
                         # Mettre à jour l'état et l'action précédente
                         previous_state = game_state
                         previous_action = decision
-
+                        
+                        print(f"count epoch : {count_epoch}")
+                        print(f"evolution of a epoch (i) : {i}")
                         # Sauvegarder la table Q après chaque étape
                         if i % EPOCH == 0 :
                             agent.decay_epsilon()
+                            count_epoch = count_epoch + 1
                             i = 0 
                         agent.save_q_table()
                     else:
@@ -192,11 +197,11 @@ async def connect_to_server(uri):
                 await handle_messages(websocket)
 
         except (websockets.exceptions.ConnectionClosedError, websockets.exceptions.InvalidHandshake):
-            print(f"Erreur lors de la connexion ou de la transmission au serveur {uri}. Nouvelle tentative dans 5 secondes...")
+            print(f"Erreur lors de la connexion ou de la transmission au serveur {uri}. Nouvelle tentative dans {TIME_OUT_RECONNECT} secondes...")
             await asyncio.sleep(TIME_OUT_RECONNECT)
 
         except Exception as e:
-            print(f"Erreur inattendue lors de la connexion: {e}. Nouvelle tentative dans 5 secondes...")
+            print(f"Erreur inattendue lors de la connexion: {e}. Nouvelle tentative dans {TIME_OUT_RECONNECT} secondes...")
             await asyncio.sleep(TIME_OUT_RECONNECT)
 
 async def main():
