@@ -10,7 +10,7 @@ from tensorflow.keras.layers import Dense
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.losses import MSE
 
-TIME_OUT_RECONNECT = 0.2
+TIME_OUT_RECONNECT = 0.1
 URI = "ws://localhost:8765"
 EPSILON_MIN = 0.01
 EPSILON_DECAY = 0.995
@@ -132,7 +132,7 @@ def compute_reward(game_state):
 ############
 
 async def handle_messages(websocket):
-    global count_epoch, i, EPOCH, BATCH_SIZE
+    global count_epoch, i, EPOCH, BATCH_SIZE,TIME_OUT_RECONNECT
     while True:
         try:
             previous_state = None
@@ -199,7 +199,7 @@ async def handle_messages(websocket):
                                 agent.save_model()
 
                     else:
-                        print("La connexion WebSocket est fermée.")
+                        raise Exception("La connexion WebSocket est fermée.")
 
         except websockets.exceptions.ConnectionClosedOK:
             print("Connexion fermée normalement.")
