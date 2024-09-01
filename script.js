@@ -1,4 +1,4 @@
-const socket = new WebSocket("ws://localhost:8765");
+let socket = new WebSocket("ws://localhost:8765");
 
 const messageQueue = [];
 
@@ -38,10 +38,12 @@ socket.addEventListener("message", function (event) {
 
 socket.addEventListener("error", function (event) {
   console.error("WebSocket error:", event);
+  socket = new WebSocket("ws://localhost:8765");
 });
 
 socket.addEventListener("close", function (event) {
   console.log("WebSocket connection closed:", event);
+  socket = new WebSocket("ws://localhost:8765");
 });
 
 function getCurrentState() {

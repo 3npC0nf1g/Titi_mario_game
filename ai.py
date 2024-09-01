@@ -188,8 +188,11 @@ async def handle_messages(websocket):
                             agent.decay_epsilon()
                             count_epoch += 1
                             i = 0
+                            print("save model")
                             agent.save_model()
+                            print("launch replay model")
                             agent.replay(32)
+                            print("launch save after replay model")
                             agent.save_model()
 
                     else:
