@@ -4,6 +4,7 @@ import json
 import numpy as np
 import random
 import os
+import hashlib
 
 TIME_OUT_RECONNECT = 0.2
 URI = "ws://localhost:8765"
@@ -12,6 +13,11 @@ EPSILON_DECAY = 0.995
 EPOCH = 60000
 i = 0
 count_epoch = 0
+
+def string_to_md5(input_string):
+    byte_string = input_string.encode()
+    md5_hash = hashlib.md5(byte_string)
+    return md5_hash.hexdigest()
 
 class QLearningAgent:
     def __init__(self, actions, alpha=0.1, gamma=0.9, epsilon=1.0, epsilon_min=0.01, epsilon_decay=0.995, q_table_file='q_table.json'):
@@ -45,7 +51,7 @@ class QLearningAgent:
         collision = game_state["data"]["collision"]
 
         state_key = json.dumps({"mario_position": mario_position, "zombies_positions": zombies_positions, "score": score, "collision": collision})
-        return state_key
+        return string_to_md5(state_key)
 
     def initialize_state(self, state_key):
         """
@@ -83,7 +89,7 @@ class QLearningAgent:
 
         # Calculer la valeur Q pour l'état suivant
         future_reward = max(self.q_table[next_state_key].values())
-        
+
         # Mettre à jour la valeur Q pour l'état actuel
         self.q_table[prev_state_key][action] += self.alpha * (reward + self.gamma * future_reward - self.q_table[prev_state_key][action])
 
@@ -130,7 +136,7 @@ def compute_reward(game_state):
 ############
 
 async def handle_messages(websocket):
-    global count_epoch,i 
+    global count_epoch,i
     while True:
         try:
             previous_state = None
@@ -142,7 +148,7 @@ async def handle_messages(websocket):
                 # Vérifier le type de message reçu
                 if game_state.get("type") == "game_state":
                     if websocket.open:
-                        i = i + 1 
+                        i = i + 1
                         # Prendre une décision avec l'agent de Q-learning
                         decision = agent.choose_action(game_state)
 
@@ -161,14 +167,14 @@ async def handle_messages(websocket):
                         # Mettre à jour l'état et l'action précédente
                         previous_state = game_state
                         previous_action = decision
-                        
+
                         print(f"count epoch : {count_epoch}")
                         print(f"evolution of a epoch (i) : {i}")
                         # Sauvegarder la table Q après chaque étape
                         if i % EPOCH == 0 :
                             agent.decay_epsilon()
                             count_epoch = count_epoch + 1
-                            i = 0 
+                            i = 0
                         agent.save_q_table()
                     else:
                         print("La connexion WebSocket est fermée.")
