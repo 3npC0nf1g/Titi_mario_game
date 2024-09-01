@@ -1,3 +1,29 @@
+async function enableWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      let wakeLock = await navigator.wakeLock.request('screen');
+      document.addEventListener('visibilitychange', async () => {
+        if (document.visibilityState === 'visible') {
+          try {
+            wakeLock = await navigator.wakeLock.request('screen');
+          } catch (err) {
+            console.error(`Erreur lors de la réactivation du Wake Lock: ${err.name}, ${err.message}`);
+          }
+        } else {
+          await wakeLock.release();
+        }
+      });
+    } else {
+      console.warn('L\'API Wake Lock n\'est pas disponible sur ce navigateur.');
+    }
+  } catch (err) {
+    console.error(`Erreur lors de la demande du Wake Lock: ${err.name}, ${err.message}`);
+  }
+}
+
+window.addEventListener('load', enableWakeLock);
+
+
 let socket = new WebSocket("ws://localhost:8765");
 
 const messageQueue = [];
